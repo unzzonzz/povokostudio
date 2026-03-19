@@ -140,11 +140,16 @@ function initRemoteForWorks() {
 
 function changeFilmData() {
     const fixedFilmContainer = document.querySelector(".fixed-film")
-    const fixedIframe = fixedFilmContainer?.querySelector("iframe")
+    const filmWrap = fixedFilmContainer?.querySelector(".film-wrap")
+    let fixedIframe = fixedFilmContainer?.querySelector("iframe")
     const textTitle = fixedFilmContainer?.querySelector(".text-01")
     const readMoreLink = fixedFilmContainer?.querySelector(".read-more a")
+    const textGroup = fixedFilmContainer?.querySelector(".text-group")
     
-    if (!fixedIframe || !fixedFilmContainer) return
+    if (!fixedIframe || !fixedFilmContainer || !filmWrap) return
+    
+    filmWrap.style.position = 'relative'
+    fixedIframe.style.transition = 'opacity 0.6s ease-in-out'
     
     const filmList = document.querySelectorAll(".film-grid .film")
     let selected = null
@@ -178,26 +183,66 @@ function changeFilmData() {
         
         isTransitioning = true
         
-        fixedFilmContainer.style.transition = 'opacity 0.5s ease-in-out'
-        fixedFilmContainer.style.opacity = 0
+        const nextIframe = document.createElement('iframe')
+        nextIframe.src = videoUrl
+        nextIframe.frameBorder = '0'
+        nextIframe.allow = 'autoplay; fullscreen; picture-in-picture; clipboard-write'
+        nextIframe.allowFullscreen = true
+        Object.assign(nextIframe.style, {
+            position: 'absolute',
+            top: '0',
+            left: '0',
+            width: '100%',
+            height: '100%',
+            opacity: '0',
+            transition: 'opacity 0.6s ease-in-out'
+        })
         
-        setTimeout(() => {
-            fixedIframe.src = videoUrl
+        filmWrap.appendChild(nextIframe)
+        
+        fixedIframe.style.opacity = '0.3'
+        
+        function finishTransition() {
+            fixedIframe.style.opacity = '0'
+            nextIframe.style.opacity = '1'
             
-            if (textTitle) textTitle.textContent = title
-            if (readMoreLink) {
-                readMoreLink.href = `/works/${workId}`
-                readMoreLink.dataset.workId = workId
+            if (textGroup) {
+                textGroup.style.transition = 'opacity 0.4s ease-in-out'
+                textGroup.style.opacity = '0'
+                
+                setTimeout(() => {
+                    if (textTitle) textTitle.textContent = title
+                    if (readMoreLink) {
+                        readMoreLink.href = `/works/${workId}`
+                        readMoreLink.dataset.workId = workId
+                    }
+                    textGroup.style.opacity = '1'
+                }, 400)
             }
             
             setTimeout(() => {
-                fixedFilmContainer.style.opacity = 1
-                
-                setTimeout(() => {
-                    isTransitioning = false
-                }, 500)
-            }, 200)
-        }, 500)
+                fixedIframe.remove()
+                nextIframe.style.position = ''
+                nextIframe.style.top = ''
+                nextIframe.style.left = ''
+                fixedIframe = nextIframe
+                isTransitioning = false
+            }, 700)
+        }
+        
+        let loaded = false
+        nextIframe.addEventListener('load', () => {
+            if (loaded) return
+            loaded = true
+            finishTransition()
+        })
+        
+        setTimeout(() => {
+            if (!loaded && nextIframe.parentNode) {
+                loaded = true
+                finishTransition()
+            }
+        }, 5000)
       })
     })
 }
